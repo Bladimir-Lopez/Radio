@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/notification_custom.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Icono de la aplicación -->
+    <ImageView
+        android:id="@+id/notification_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_launcher_foreground" />
+
+    <!-- Título de la notificación -->
+    <TextView
+        android:id="@+id/notification_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Radio Tapacarí"
+        android:textSize="16sp"
+        android:textColor="#000000"
+        android:paddingStart="8dp" />
+
+    <!-- Botón Play/Pause -->
+    <ImageView
+        android:id="@+id/button_play_pause"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/play"
+        android:contentDescription="Play/Pause" />
+
+    <!-- Botón Cerrar -->
+    <ImageView
+        android:id="@+id/button_close"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/cerrar"
+        android:contentDescription="Cerrar" />
+</LinearLayout>
