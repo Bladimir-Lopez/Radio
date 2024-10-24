@@ -26,7 +26,6 @@ import androidx.core.app.NotificationCompat;
 
 import java.io.IOException;
 
-
 // MainActivity es la actividad principal de la aplicación
 public class MainActivity extends AppCompatActivity {
     private static final String CHANNEL_ID = "radio_channel"; // ID del canal de notificación
@@ -39,26 +38,28 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBarVolume; // Barra deslizante para controlar el volumen
     public static MainActivity instance; // Instancia estática de MainActivity
 
-
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main); // Establece el diseño de la actividad principal
         instance = this; // Asigna la instancia actual a la variable estática
+
+        // Inicializa componentes de la interfaz y la lógica de reproducción
         initializeUI();
         initializeMediaPlayer();
         initializeVolumeControl();
         initializePhoneStateListener();
         createNotificationChannel();
-
     }
+
+    // Método estático para alternar la reproducción/pausa
     public static void togglePlayPauseStatic() {
         if (instance != null) {
             instance.togglePlayPause(); // Llama al método de instancia
         }
     }
+
+    // Crea un canal de notificación para dispositivos Android O y superiores
     protected void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Radio Channel"; // Nombre del canal
@@ -71,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Muestra una notificación personalizada con los controles de reproducción
     private void showNotification(String title, String message) {
         // Crear RemoteViews personalizado
         @SuppressLint("RemoteViewLayout") RemoteViews notificationLayout = new RemoteViews(getPackageName(), R.layout.notification_custom);
@@ -80,19 +82,8 @@ public class MainActivity extends AppCompatActivity {
         notificationLayout.setImageViewResource(R.id.button_play_pause, playPauseIcon);
 
         // Configurar acciones para los botones
-        Intent toggleIntent = new Intent(this, NotificationReceiver.class);
-        toggleIntent.setAction("ACTION_TOGGLE_PLAY_PAUSE");
-        PendingIntent togglePendingIntent = PendingIntent.getBroadcast(
-                this, 0, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        notificationLayout.setOnClickPendingIntent(R.id.button_play_pause, togglePendingIntent);
-
-        Intent closeIntent = new Intent(this, NotificationReceiver.class);
-        closeIntent.setAction("ACTION_CLOSE");
-        PendingIntent closePendingIntent = PendingIntent.getBroadcast(
-                this, 1, closeIntent, PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        notificationLayout.setOnClickPendingIntent(R.id.button_close, closePendingIntent);
+        configureNotificationAction(notificationLayout, R.id.button_play_pause, "ACTION_TOGGLE_PLAY_PAUSE");
+        configureNotificationAction(notificationLayout, R.id.button_close, "ACTION_CLOSE");
 
         // Crear la notificación
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -106,12 +97,21 @@ public class MainActivity extends AppCompatActivity {
         notificationManager.notify(NOTIFICATION_ID, builder.build());
     }
 
+    // Configura las acciones de los botones en la notificación
+    private void configureNotificationAction(RemoteViews notificationLayout, int viewId, String action) {
+        Intent intent = new Intent(this, NotificationReceiver.class);
+        intent.setAction(action);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        notificationLayout.setOnClickPendingIntent(viewId, pendingIntent);
+    }
 
+    // Cancela la notificación activa
     protected void cancelNotification() {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.cancel(NOTIFICATION_ID); // Cancela la notificación por ID
     }
 
+    // Inicializa la interfaz de usuario y asigna eventos de clic
     protected void initializeUI() {
         playPauseButton = findViewById(R.id.buttonPlayPause);
         playPauseButton.setOnClickListener(v -> togglePlayPause());
@@ -123,20 +123,24 @@ public class MainActivity extends AppCompatActivity {
         setOnClickListener(R.id.pagina, "https://tapacari.gob.bo/");
     }
 
+    // Asigna un enlace a una vista específica
     protected void setOnClickListener(int viewId, String url) {
         findViewById(viewId).setOnClickListener(v -> openLink(url)); // Asigna el enlace a la vista especificada
     }
 
+    // Inicializa el MediaPlayer y configura el listener para iniciar la reproducción
     protected void initializeMediaPlayer() {
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.start());
     }
 
+    // Inicializa el control de volumen y su comportamiento
     protected void initializeVolumeControl() {
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         ImageButton buttonVolume = findViewById(R.id.buttonVolume);
         seekBarVolume = findViewById(R.id.seekBarVolume);
 
+        // Configura la barra de volumen
         seekBarVolume.setMax(audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
         seekBarVolume.setProgress(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC));
 
@@ -161,17 +165,20 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Alterna la visibilidad de la barra de volumen y muestra un mensaje
     protected void toggleSeekBarVisibility() {
         int visibility = (seekBarVolume.getVisibility() == View.GONE) ? View.VISIBLE : View.GONE;
         seekBarVolume.setVisibility(visibility); // Cambia la visibilidad del SeekBar
         Toast.makeText(this, visibility == View.VISIBLE ? "Control de volumen visible" : "Control de volumen oculto", Toast.LENGTH_SHORT).show();
     }
 
+    // Inicializa el listener del estado del teléfono
     protected void initializePhoneStateListener() {
         TelephonyManager telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
         telephonyManager.listen(new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
+                // Si hay una llamada y la radio está sonando, pausa la reproducción
                 if ((state == TelephonyManager.CALL_STATE_OFFHOOK || state == TelephonyManager.CALL_STATE_RINGING) && isPlaying) {
                     togglePlayPause(); // Pausa la reproducción
                 }
@@ -179,43 +186,45 @@ public class MainActivity extends AppCompatActivity {
         }, PhoneStateListener.LISTEN_CALL_STATE); // Registra el listener para cambios de estado
     }
 
+    // Alterna entre reproducir y pausar la radio
     protected void togglePlayPause() {
         if (isPlaying) {
             stopRadio();
             updatePlayPauseButton(R.drawable.play, "Pausado", "Radio Tapacari");
-
         } else {
             playRadio();
             updatePlayPauseButton(R.drawable.pausa, "Reproduciendo", "Radio Tapacari");
             Toast.makeText(this, "Reproduciendo", Toast.LENGTH_SHORT).show(); // Mensaje de reproducción
-            // Inicia el servicio
         }
         isPlaying = !isPlaying; // Alterna el estado de reproducción
     }
 
-
+    // Actualiza el botón de reproducción/pausa y muestra la notificación
     protected void updatePlayPauseButton(int icon, String title, String message) {
         playPauseButton.setImageResource(icon); // Cambia el ícono
         showNotification(title, message); // Muestra la notificación
     }
 
+    // Inicia la transmisión de la radio
     protected void playRadio() {
         try {
-            mediaPlayer.reset();
+            mediaPlayer.reset(); // Restablece el MediaPlayer
             mediaPlayer.setDataSource("https://stream.zeno.fm/xtvmziqutm5vv"); // URL de la transmisión de radio
-            mediaPlayer.prepareAsync();
+            mediaPlayer.prepareAsync(); // Prepara la transmisión de forma asíncrona
         } catch (IOException e) {
             Toast.makeText(this, "Error al iniciar la transmisión", Toast.LENGTH_SHORT).show(); // Mensaje de error
         }
     }
 
+    // Detiene la reproducción de la radio
     protected void stopRadio() {
         if (mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
+            mediaPlayer.stop(); // Detiene la reproducción
             playPauseButton.setImageResource(R.drawable.stop); // Cambia el ícono a "Stop"
         }
     }
 
+    // Abre un enlace en el navegador
     private void openLink(String url) {
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); // Crea una intención para abrir el enlace
     }
@@ -226,4 +235,3 @@ public class MainActivity extends AppCompatActivity {
         instance = null; // Limpia la referencia estática
     }
 }
-
